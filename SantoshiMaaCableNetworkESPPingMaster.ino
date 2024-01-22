@@ -22,8 +22,6 @@ CRGB leds[NUM_LEDS];
 
 TaskHandle_t Task1;
 
-
-
 void adjustBrightness ();
 void remoteHost();
 void ipCheck();
@@ -42,11 +40,7 @@ void welcomeMsg();
 void clearLCD();
 void loading();
 
-
-
 U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 18, 23, 5, 22); //for full buffer mode
-
-//U8G2_ST7920_128X64_1_SW_SPI u8g2(U8G2_R0, 18, 23, 5, 22); //for page buffer mode
 
 const IPAddress remote_ip(8, 8, 8, 8);
 const char* remote_host = "www.google.com";
@@ -58,15 +52,10 @@ unsigned long previousMillis = 0;
 const long buzzerDuration = 200;
 const long interval = 300000;
 
-//unsigned long currentMillis = 0;
-//uint8_t blinkLedFlag = 0;
-
 uint8_t wifiRSSI = 0;
 uint8_t pingStatus = 0;
-//uint8_t wifiConnectStatus = 0;
 uint16_t pingTime = 0;
 String ssid = "";
-
 
 static unsigned char upload_logo_bits[] = {
   0x04,
@@ -89,7 +78,6 @@ static unsigned char download_logo_bits[] = {
   0x04
 };
 
-
 int signalQuality[] = {99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
                        99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 98, 98, 98, 97, 97, 96, 96, 95, 95, 94, 93, 93, 92,
                        91, 90, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79, 78, 76, 75, 74, 73, 71, 70, 69, 67, 66, 64,
@@ -104,13 +92,13 @@ void setup() {
   u8g2.begin();
   welcomeMsg();
   delay(3000);
-//  connectWiFi(0, 10);
+  //  connectWiFi(0, 10);
   u8g2.clearBuffer();
 
   FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
   adjustBrightness ();
-//  FastLED.setBrightness(BRIGHTNESS);
+  //  FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
   FastLED.show();
 
@@ -125,7 +113,6 @@ void setup() {
     1);
   delay(500);
 }
-
 
 ////////////////////////////////////////////////////////////////
 
@@ -143,7 +130,7 @@ void remoteHost(uint8_t rhx, uint8_t rhy) {
 
   clearLCD(rhx, rhy - 10, 128, 10);
 
-  u8g2.setFont(u8g2_font_helvR08_tr); //8px height
+  u8g2.setFont(u8g2_font_helvR08_tr);
   u8g2.drawStr(rhx, rhy, "ping -t");
   u8g2.drawStr(rhx + 37, rhy, remote_host);
   u8g2.sendBuffer();
@@ -255,11 +242,11 @@ void wifiConnectStatusLed(uint8_t wifiConnectStatus) {
     leds[WIFI_CONNECT_STATUS_LED] = CRGB(255, 64, 0);
     FastLED.show();
   }
-//  if (wifiConnectStatus == 2) {
-//
-//    leds[WIFI_CONNECT_STATUS_LED] = CRGB(255, 255, 255);
-//    FastLED.show();
-//  }
+  //  if (wifiConnectStatus == 2) {
+  //
+  //    leds[WIFI_CONNECT_STATUS_LED] = CRGB(255, 255, 255);
+  //    FastLED.show();
+  //  }
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -278,7 +265,6 @@ void printLocalTime(uint8_t ltx, uint8_t lty) {
     u8g2.setFont(u8g2_font_unifont_tr);
     u8g2.drawStr(ltx, lty, "Time Failed!");
     u8g2.sendBuffer();
-
   }
 
   if (getLocalTime(&timeinfo)) {
@@ -345,18 +331,6 @@ void printLocalTime(uint8_t ltx, uint8_t lty) {
       %%  % character.
     */
 
-    //print like "const char*"
-    //Serial.println(timeStringBuff);
-    //Serial.println(wDayStringBuff);
-    //Serial.println(mDayStringBuff);
-    //Serial.println(mNameStringBuff);
-    //Serial.println(monthStringBuff);
-    //Serial.println(yearStringBuff);
-
-    //Optional: Construct String object
-    //String asString(timeStringBuff);
-
-
     u8g2.setFont(u8g2_font_timB18_tr);
     u8g2.drawStr(ltx, lty, timeStringBuff);
 
@@ -366,7 +340,6 @@ void printLocalTime(uint8_t ltx, uint8_t lty) {
     u8g2.drawStr(ltx + 78, lty, mDayStringBuff);
     u8g2.drawStr(ltx + 94, lty, monthStringBuff);
     u8g2.drawStr(ltx + 110, lty, yearStringBuff);
-
 
     u8g2.drawStr(ltx + 59, lty - 9, secStringBuff);
     u8g2.drawStr(ltx + 78, lty - 9, wDayStringBuff);
@@ -433,9 +406,7 @@ void internetStatus(uint8_t iSx, uint8_t iSy, uint8_t statusValue) {
 
     clearLCD(iSx + 82, iSy - 9, 36, 9);
     u8g2.drawStr(iSx + 82, iSy, "Online");
-
     u8g2.sendBuffer();
-
   }
   if (statusValue == 2)
   {
@@ -444,7 +415,6 @@ void internetStatus(uint8_t iSx, uint8_t iSy, uint8_t statusValue) {
     clearLCD(iSx, iSy - 9, 128, 9);
     u8g2.setFont(u8g2_font_t0_11b_tr);
     u8g2.drawStr(iSx, iSy, "No internet!");
-
   }
 }
 
@@ -546,8 +516,8 @@ void noInternetBeep(int netStatus) {
 }
 
 /////////////////////////////////////////////////////////////
-void loading()
-{
+
+void loading() {
   static uint16_t sPseudotime = 0;
   static uint16_t sLastMillis = 0;
   static uint16_t sHue16 = 0;
@@ -601,17 +571,13 @@ void loop1(void * parameter) {
       FastLED.show();
     }
   }
-
 }
 
 //////////////////////////////////////////////////////////////////
+
 void loop() {
 
-
-
-
-  if (WiFi.status() == WL_CONNECTED)
-  {
+  if (WiFi.status() == WL_CONNECTED) {
     wifiConnectStatusLed(1);
     printSSID(0, 53);
     wifiSignalQuality(100, 53);
@@ -620,10 +586,8 @@ void loop() {
     remoteHost(0, 29);
     internetStatus(0, 42, pingStatus);
     noInternetBeep(pingStatus);
-
   }
-  else
-  {
+  else {
     wifiConnectStatusLed(2);
     connectWiFi(0, 10);
     clearLCD(0, 0, 128, 64);
