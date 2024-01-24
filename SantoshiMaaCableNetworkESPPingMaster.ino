@@ -43,7 +43,8 @@ void loading();
 U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 18, 23, 5, 22); //for full buffer mode
 
 const IPAddress remote_ip(8, 8, 8, 8);
-const char* remote_host = "www.google.com";
+//const char* remote_host = "www.google.com"; //only for ping, not for print to display 
+const char* remote_host = "8.8.8.8"; //only for print to display, not for ping
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 19800;
 const int   daylightOffset_sec = 0;
@@ -455,7 +456,7 @@ void pingTest() {
 
   iconUpDown(107, 55, 1);
 
-  if (Ping.ping(remote_host))
+  if (Ping.ping(remote_ip)) //remote_ip, remote_host
   {
 
     pingTime = Ping.averageTime();
