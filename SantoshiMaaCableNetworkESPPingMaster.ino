@@ -20,7 +20,8 @@
 
 CRGB leds[NUM_LEDS];
 
-TaskHandle_t Task1;
+TaskHandle_t Task2;
+SemaphoreHandle_t variableMutex;
 
 void adjustBrightness ();
 void remoteHost();
@@ -43,19 +44,22 @@ void loading();
 U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 18, 23, 5, 22); //for full buffer mode
 
 const IPAddress remote_ip(8, 8, 8, 8);
-//const char* remote_host = "www.google.com"; //only for ping, not for print to display 
-const char* remote_host = "8.8.8.8"; //only for print to display, not for ping
+//const char* remote_host = "www.google.com";
+const char* remote_host = "8.8.8.8";
+
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 19800;
 const int   daylightOffset_sec = 0;
 
 unsigned long previousMillis = 0;
 const long buzzerDuration = 200;
-const long interval = 300000;
+const long interval = 540000; //9mins, in seconds
 
 uint8_t wifiRSSI = 0;
 uint8_t pingStatus = 0;
 uint16_t pingTime = 0;
+volatile uint8_t sharedVarForStatus = 0;
+volatile uint16_t sharedVarForTime = 0;
 String ssid = "";
 
 static unsigned char upload_logo_bits[] = {
@@ -99,18 +103,19 @@ void setup() {
   FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
   adjustBrightness ();
-  //  FastLED.setBrightness(BRIGHTNESS);
+//  FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
   FastLED.show();
 
-
+  variableMutex = xSemaphoreCreateMutex();
+  
   xTaskCreatePinnedToCore(
-    loop1,
-    "Task1",
+    loop2,
+    "Task2",
     100000,
     NULL,
     1,
-    &Task1,
+    &Task2,
     1);
   delay(500);
 }
@@ -456,21 +461,34 @@ void pingTest() {
 
   iconUpDown(107, 55, 1);
 
-  if (Ping.ping(remote_ip)) //remote_ip, remote_host
-  {
+  if (Ping.ping(remote_ip)) { //remote_ip, remote_host
 
-    pingTime = Ping.averageTime();
-    pingStatus = 1;
+    if (xSemaphoreTake(variableMutex, portMAX_DELAY)) {
+      sharedVarForTime = Ping.averageTime();
+      sharedVarForStatus = 1;
+      xSemaphoreGive(variableMutex);
+    }
 
     iconUpDown(107, 55, 2);
   }
-  else
-  {
-    pingStatus = 2;
+  else {
+    if (xSemaphoreTake(variableMutex, portMAX_DELAY)) {
+      sharedVarForStatus = 2;
+      xSemaphoreGive(variableMutex);
+    }
     iconUpDown(107, 55, 2);
   }
 
   delay(3000);
+}
+
+/////////////////////////////////////////////////////////
+void updatePingValue() {
+  if (xSemaphoreTake(variableMutex, portMAX_DELAY)) {
+    pingTime = sharedVarForTime;
+    pingStatus = sharedVarForStatus;
+    xSemaphoreGive(variableMutex);
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -512,6 +530,13 @@ void noInternetBeep(int netStatus) {
       digitalWrite(BUZ, HIGH);
       delay(buzzerDuration);
       digitalWrite(BUZ, LOW);
+
+      if (Ping.ping(remote_ip)) //remote_ip, remote_host
+      {
+        pingTime = Ping.averageTime();
+        pingStatus = 1;
+      }
+
     }
   }
 }
@@ -560,10 +585,9 @@ void loading() {
 
 ///////////////////////////////////////////////////////////////
 
-void loop1(void * parameter) {
-  while (1) {
-    if (WiFi.status() == WL_CONNECTED)
-    {
+void loop2(void * parameter) {
+  for (;;) {
+    if (WiFi.status() == WL_CONNECTED) {
       pingTest();
     }
 
@@ -571,20 +595,23 @@ void loop1(void * parameter) {
       loading();
       FastLED.show();
     }
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
+
 }
 
 //////////////////////////////////////////////////////////////////
-
 void loop() {
 
   if (WiFi.status() == WL_CONNECTED) {
     wifiConnectStatusLed(1);
+    updatePingValue();
+    printLocalTime(0, 18);
+    remoteHost(0, 29);
     printSSID(0, 53);
     wifiSignalQuality(100, 53);
     ipCheck(0, 63);
-    printLocalTime(0, 18);
-    remoteHost(0, 29);
     internetStatus(0, 42, pingStatus);
     noInternetBeep(pingStatus);
   }
