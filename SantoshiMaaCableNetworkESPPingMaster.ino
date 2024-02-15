@@ -2,6 +2,7 @@
 #include <ESP32Ping.h>
 #include <WiFiManager.h>
 #include "time.h"
+#include "Ticker.h"
 #include <U8g2lib.h>
 #include <string.h>
 #include <FastLED.h>
@@ -22,6 +23,7 @@ CRGB leds[NUM_LEDS];
 
 TaskHandle_t Task2;
 SemaphoreHandle_t variableMutex;
+Ticker nointernetTimer;
 
 void adjustBrightness ();
 void remoteHost();
@@ -51,6 +53,7 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 19800;
 const int   daylightOffset_sec = 0;
 
+unsigned long countSec = 0; //
 unsigned long previousMillis = 0;
 const long buzzerDuration = 200;
 const long interval = 540000; //9mins, in seconds
@@ -95,6 +98,7 @@ void setup() {
   pinMode(BUZ, OUTPUT);
   pinMode(ADJUST_BRIGHTNESS, INPUT);
   u8g2.begin();
+  nointernetTimer.attach(1, timerOn);
   welcomeMsg();
   delay(3000);
   //  connectWiFi(0, 10);
@@ -103,12 +107,12 @@ void setup() {
   FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
   adjustBrightness ();
-//  FastLED.setBrightness(BRIGHTNESS);
+  //  FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
   FastLED.show();
 
   variableMutex = xSemaphoreCreateMutex();
-  
+
   xTaskCreatePinnedToCore(
     loop2,
     "Task2",
@@ -120,6 +124,15 @@ void setup() {
   delay(500);
 }
 
+///////////////////////////////////////////////////////////////
+void timerOn() {
+  if (pingStatus == 2) {
+    countSec++;
+  }
+  else {
+    countSec = 0;
+  }
+}
 ////////////////////////////////////////////////////////////////
 
 void adjustBrightness () {
@@ -128,7 +141,6 @@ void adjustBrightness () {
   int mappedValue = map(sensorValue, 0, 4095, 10, 255);
   FastLED.setBrightness(mappedValue);
 }
-
 
 ///////////////////////////////////////////////////////////////////
 
@@ -410,7 +422,7 @@ void internetStatus(uint8_t iSx, uint8_t iSy, uint8_t statusValue) {
     u8g2.setFont(u8g2_font_t0_11b_tr);
     u8g2.drawStr(iSx, iSy, avg_time_str);
 
-    clearLCD(iSx + 82, iSy - 9, 36, 9);
+    clearLCD(iSx + 82, iSy - 9, 45, 9);
     u8g2.drawStr(iSx + 82, iSy, "Online");
     u8g2.sendBuffer();
   }
@@ -519,6 +531,7 @@ void clearLCD(const long x, uint8_t y, uint8_t wid, uint8_t hig) {
 //////////////////////////////////////////////////////////////
 
 void noInternetBeep(int netStatus) {
+
   if (netStatus == 2) {
     unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
@@ -536,14 +549,49 @@ void noInternetBeep(int netStatus) {
         pingTime = Ping.averageTime();
         pingStatus = 1;
       }
-
     }
   }
 }
 
 /////////////////////////////////////////////////////////////
+void printTimer(int netStatus, uint8_t ptx, uint8_t pty) {
 
+  String elapsedTime = "";
+
+  if (netStatus == 2) {
+    unsigned int countMin = countSec / 60;
+    unsigned int countHour = countMin / 60;
+    unsigned int countDay = countHour / 24;
+
+    if (countHour > 24) {
+      clearLCD(ptx, pty - 9, 45, 9);
+      u8g2.setFont(u8g2_font_6x10_tr);
+      elapsedTime += String(countDay) + "d" + String(countHour % 24) + "h";
+      u8g2.drawStr(ptx, pty, elapsedTime.c_str());
+    }
+    else if (countMin > 60) {
+      clearLCD(ptx, pty - 9, 45, 9);
+      u8g2.setFont(u8g2_font_6x10_tr);
+      elapsedTime += String(countHour) + "h" + String(countMin % 60) + "m";
+      u8g2.drawStr(ptx, pty, elapsedTime.c_str());
+    }
+    else if (countSec > 60) {
+      clearLCD(ptx, pty - 9, 45, 9);
+      u8g2.setFont(u8g2_font_6x10_tr);
+      elapsedTime += String(countMin) + "m" + String(countSec % 60) + "s";
+      u8g2.drawStr(ptx, pty, elapsedTime.c_str());
+    }
+    else {
+      clearLCD(ptx, pty - 9, 45, 9);
+      u8g2.setFont(u8g2_font_6x10_tr);
+      elapsedTime += String(countSec) + "s";
+      u8g2.drawStr(ptx, pty, elapsedTime.c_str());
+    }
+  }
+}
+/////////////////////////////////////////////////////////////
 void loading() {
+  
   static uint16_t sPseudotime = 0;
   static uint16_t sLastMillis = 0;
   static uint16_t sHue16 = 0;
@@ -614,6 +662,7 @@ void loop() {
     ipCheck(0, 63);
     internetStatus(0, 42, pingStatus);
     noInternetBeep(pingStatus);
+    printTimer(pingStatus, 82, 42);
   }
   else {
     wifiConnectStatusLed(2);
