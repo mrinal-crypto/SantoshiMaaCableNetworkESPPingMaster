@@ -146,13 +146,16 @@ void adjustBrightness () {
 
 void remoteHost(uint8_t rhx, uint8_t rhy) {
 
+  String host = "ping -t " + String(remote_host) + " <Google>";
   clearLCD(rhx, rhy - 10, 128, 10);
 
   u8g2.setFont(u8g2_font_helvR08_tr);
-  u8g2.drawStr(rhx, rhy, "ping -t");
-  u8g2.drawStr(rhx + 37, rhy, remote_host);
-  u8g2.sendBuffer();
+  u8g2.drawStr(rhx, rhy, host.c_str());
 
+  //  u8g2.drawStr(rhx, rhy, "ping -t");
+  //  u8g2.drawStr(rhx + 37, rhy, remote_host);
+
+  u8g2.sendBuffer();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -521,11 +524,13 @@ void welcomeMsg() {
 
 //////////////////////////////////////////////
 
-void clearLCD(const long x, uint8_t y, uint8_t wid, uint8_t hig) {
+void clearLCD(const long x, uint8_t y, uint8_t wid, uint8_t hig) { 
+  /*  box wid is right x, box height is below y 
+   *  where font wid is right x, font height is upper y   
+  */
   u8g2.setDrawColor(0);
   u8g2.drawBox(x, y, wid, hig);
   u8g2.setDrawColor(1);
-
 }
 
 //////////////////////////////////////////////////////////////
@@ -566,19 +571,19 @@ void printTimer(int netStatus, uint8_t ptx, uint8_t pty) {
     if (countHour > 24) {
       clearLCD(ptx, pty - 9, 45, 9);
       u8g2.setFont(u8g2_font_6x10_tr);
-      elapsedTime += String(countDay) + "d" + String(countHour % 24) + "h";
+      elapsedTime += String(countDay) + "d " + String(countHour % 24) + "h";
       u8g2.drawStr(ptx, pty, elapsedTime.c_str());
     }
     else if (countMin > 60) {
       clearLCD(ptx, pty - 9, 45, 9);
       u8g2.setFont(u8g2_font_6x10_tr);
-      elapsedTime += String(countHour) + "h" + String(countMin % 60) + "m";
+      elapsedTime += String(countHour) + "h " + String(countMin % 60) + "m";
       u8g2.drawStr(ptx, pty, elapsedTime.c_str());
     }
     else if (countSec > 60) {
       clearLCD(ptx, pty - 9, 45, 9);
       u8g2.setFont(u8g2_font_6x10_tr);
-      elapsedTime += String(countMin) + "m" + String(countSec % 60) + "s";
+      elapsedTime += String(countMin) + "m " + String(countSec % 60) + "s";
       u8g2.drawStr(ptx, pty, elapsedTime.c_str());
     }
     else {
